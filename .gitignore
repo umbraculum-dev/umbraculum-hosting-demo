@@ -1,0 +1,25 @@
+# Secrets and local env (never commit)
+.env
+.env.*
+!.env.example
+acme.json
+*.pem
+*.key
+secrets/
+
+# Editor / OS
+.DS_Store
+*.swp
+*~
+.idea/
+.vscode/
+*.code-workspace
+
+# Logs and temp
+*.log
+tmp/
+.cache/
+
+# Docker local overrides (when compose lands)
+docker-compose.override.yml
+docker-compose.local.yml
