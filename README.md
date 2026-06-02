@@ -8,16 +8,18 @@ Operator repo for **`demo.umbraculum.dev`** — Traefik TLS edge + production Do
 
 Scaffold only. Full stack per [demo-vps-bootstrap plan](https://github.com/umbraculum-dev/umbraculum-dev) and `docs/OPERATOR.md` (compose + Traefik land here in a follow-up PR).
 
-## Quick start (VPS, when compose exists)
+## Quick start (fresh VPS)
+
+As **root**:
 
 ```bash
-git clone --recurse-submodules git@github.com:umbraculum-dev/umbraculum-hosting-demo.git /opt/umbraculum-hosting-demo
-git clone git@github.com:umbraculum-dev/umbraculum-dev.git /opt/umbraculum-dev
+apt-get update && apt-get install -y git
+git clone --recurse-submodules https://github.com/umbraculum-dev/umbraculum-hosting-demo.git /opt/umbraculum-hosting-demo
 cd /opt/umbraculum-hosting-demo
-bin/harden    # as root
-bin/pull
-# docker compose -f docker-compose.demo.yml up -d  (when added)
+bin/bootstrap
 ```
+
+When compose exists: clone umbraculum-dev, DNS, then `docker compose` per `docs/OPERATOR.md`.
 
 ## Submodule
 
