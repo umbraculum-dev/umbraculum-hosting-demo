@@ -8,7 +8,9 @@ services:
   traefik:
     # v3.3 Docker provider speaks API 1.24; Docker CE 29+ (bin/bootstrap) requires >= 1.44.
     # Use v3.6+ for API negotiation — otherwise no container routes and LE never issues.
-    image: traefik:v3.6
+    # Digest pin locks the edge against silent upstream updates. To bump:
+    #   docker pull traefik:v3.6 && docker inspect traefik:v3.6 --format '{{index .RepoDigests 0}}'
+    image: traefik:v3.6@sha256:802adc80a7bb20a6766c9385c2ad547f0de98564cd20d31d0b6d8f726f906f66
     restart: unless-stopped
     command:
       - --log.level=INFO
