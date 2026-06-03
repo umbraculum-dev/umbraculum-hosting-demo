@@ -74,12 +74,14 @@ Edit `.env`:
 
 ### C5 — Start stack
 
+**Requires** C3 (`build-packages-in-docker.sh --all --fresh`) so Docker volume `umbraculum_root_node_modules` exists. Compose mounts that volume — do not rely on per-app `npm install` alone.
+
 ```bash
 cd /opt/umbraculum-hosting-demo
 docker compose -f docker-compose.demo.yml --env-file .env up -d
 ```
 
-First start runs `npm install` + production build inside **api** and **web** (10–30+ minutes). Tail logs:
+First start runs production **build** for **api** and **web** workspaces (10–30+ minutes). Tail logs:
 
 ```bash
 docker compose -f docker-compose.demo.yml logs -f api web traefik
