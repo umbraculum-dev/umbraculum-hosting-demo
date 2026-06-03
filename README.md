@@ -6,7 +6,7 @@ Operator repo for **`demo.umbraculum.dev`** — Traefik TLS edge + production Do
 
 ## Status
 
-Scaffold only. Full stack per [demo-vps-bootstrap plan](https://github.com/umbraculum-dev/umbraculum-dev) and `docs/OPERATOR.md` (compose + Traefik land here in a follow-up PR).
+**Phase C:** `docker-compose.demo.yml` + Traefik + `nginx/demo.conf` + `.env.demo.example`. Deploy steps: `docs/OPERATOR.md`.
 
 ## Quick start (fresh VPS)
 
@@ -19,7 +19,7 @@ cd /opt/umbraculum-hosting-demo
 bin/bootstrap
 ```
 
-When compose exists: clone umbraculum-dev, DNS, then `docker compose` per `docs/OPERATOR.md`.
+Then Phase C in `docs/OPERATOR.md` (clone umbraculum-dev, build packages, `.env`, `docker compose -f docker-compose.demo.yml up -d`).
 
 ## Submodule
 

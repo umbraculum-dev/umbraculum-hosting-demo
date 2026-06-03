@@ -1,14 +1,21 @@
 # Demo VPS operator guide (`demo.umbraculum.dev`)
 
-**Status:** Scaffold. Implementation tracked in umbraculum-dev **demo-vps-bootstrap** plan.
+**Repo:** umbraculum-hosting-demo. **Product gates:** [demo-host-runbook.md](https://github.com/umbraculum-dev/umbraculum-dev/blob/master/docs/design/demo-host-runbook.md). **SSL ADR:** [demo-host-ssl-strategy.md](https://github.com/umbraculum-dev/umbraculum-dev/blob/master/docs/design/demo-host-ssl-strategy.md).
 
 ---
 
-## First boot — install git, clone this repo, bootstrap
+## Layout on demo VPS
 
-Same chicken-and-egg as forum: install **git** with `apt`, then clone, then **`bin/bootstrap`**.
+| Path | Repo |
+|------|------|
+| `/opt/umbraculum-hosting-demo` | This repo — Traefik, `docker-compose.demo.yml`, `.env` |
+| `/opt/umbraculum-dev` | Application source — builds, migrations, verify scripts |
 
-As **root**:
+---
+
+## Phase 0 — First boot (host only)
+
+As **root** (SSH keys recommended before `bin/harden --ssh-hardening`):
 
 ```bash
 apt-get update && apt-get install -y git
@@ -17,40 +24,103 @@ cd /opt/umbraculum-hosting-demo
 bin/bootstrap
 ```
 
-Also clone umbraculum-dev on the demo VPS when the stack is implemented (see below).
+DNS: `demo.umbraculum.dev` **A** → VPS IPv4 (grey cloud). Verify: `dig +short demo.umbraculum.dev`.
 
 ---
 
-## Planned layout on demo VPS
+## Phase C — Application deploy
 
-| Path | Repo |
-|------|------|
-| `/opt/umbraculum-hosting-demo` | This repo — Traefik, `docker-compose.demo.yml`, `.env.demo.example` |
-| `/opt/umbraculum-dev` | Application source — `npm run build`, packages, `scripts/demo-host-verify.sh` |
-
-## Steps (when implemented)
-
-1. **Provision** Contabo VPS 10, Ubuntu 24.04 (no Auto Backup at bootstrap).
-2. First boot block above (`apt` + git + clone + `bin/bootstrap`).
-3. Clone umbraculum-dev for image build context.
-4. DNS: `demo` A record → VPS (grey cloud).
-5. `docker compose -f docker-compose.demo.yml build && up -d` from this repo.
-6. Migrate/seed API per umbraculum-dev runbook.
-7. Run `demo-host-verify.sh` and native API smoke from umbraculum-dev.
-
-## Hardening / bootstrap (available now)
+### C1 — Update operator repo
 
 ```bash
 cd /opt/umbraculum-hosting-demo
 bin/pull
-bin/bootstrap    # prereqs + security — fresh or after common submodule bump
-bin/harden       # security only
 ```
 
-## Product / EAS docs
+Requires `docker-compose.demo.yml`, `nginx/demo.conf`, and `.env.demo.example` on `main`.
 
-- [demo-host-runbook.md](https://github.com/umbraculum-dev/umbraculum-dev/blob/master/docs/design/demo-host-runbook.md)
-- [native-eas-demo-build-log.md](https://github.com/umbraculum-dev/umbraculum-dev/blob/master/docs/design/native-eas-demo-build-log.md)
+### C2 — Clone application source
+
+```bash
+git clone https://github.com/umbraculum-dev/umbraculum-dev.git /opt/umbraculum-dev
+cd /opt/umbraculum-dev
+# pin a release tag or branch as needed, e.g. git checkout main && git pull
+```
+
+### C3 — Build workspace packages (required before compose up)
+
+From `/opt/umbraculum-dev` on the VPS:
+
+```bash
+./scripts/build-packages-in-docker.sh --all --fresh
+```
+
+Expect several minutes on VPS 10; adds swap if OOM during build (see demo-vps-bootstrap plan).
+
+### C4 — Configure secrets
+
+```bash
+cd /opt/umbraculum-hosting-demo
+cp .env.demo.example .env
+chmod 600 .env
+```
+
+Edit `.env`:
+
+- `ACME_EMAIL` — Let's Encrypt contact
+- `POSTGRES_PASSWORD` — strong random; keep `DATABASE_URL` in sync
+- `APP_AI_KEY_SECRET` — `openssl rand -hex 32` (required for `NODE_ENV=production`)
+- `RENDERING_SIGNING_SECRET` — `openssl rand -hex 32` (recommended)
+
+### C5 — Start stack
+
+```bash
+cd /opt/umbraculum-hosting-demo
+docker compose -f docker-compose.demo.yml --env-file .env up -d
+```
+
+First start runs `npm install` + production build inside **api** and **web** (10–30+ minutes). Tail logs:
+
+```bash
+docker compose -f docker-compose.demo.yml logs -f api web traefik
+```
+
+Traefik obtains the LE certificate once port 80 is reachable for `demo.umbraculum.dev`.
+
+### C6 — Database migrate + seed
+
+When **api** is healthy:
+
+```bash
+cd /opt/umbraculum-hosting-demo
+docker compose -f docker-compose.demo.yml exec api sh -c 'cd /app && npx prisma migrate deploy'
+docker compose -f docker-compose.demo.yml exec api npm run seed:e2e
+```
+
+### C7 — Verify (laptop or VPS)
+
+```bash
+/opt/umbraculum-dev/scripts/demo-host-verify.sh
+BASE_URL=https://demo.umbraculum.dev /opt/umbraculum-dev/scripts/demo-native-api-smoke.sh
+```
+
+Browser: `https://demo.umbraculum.dev/en` — E2E admin per demo-host-runbook.
+
+---
+
+## Maintenance
+
+```bash
+cd /opt/umbraculum-hosting-demo
+bin/pull
+cd /opt/umbraculum-dev && git pull
+./scripts/build-packages-in-docker.sh --from-diff HEAD~1 --include-dependents
+docker compose -f docker-compose.demo.yml --env-file .env up -d --build
+```
+
+`bin/harden` / `bin/bootstrap` — see [hosting-common README](https://github.com/umbraculum-dev/umbraculum-hosting-common/blob/main/README.md).
+
+---
 
 ## Isolation
 
