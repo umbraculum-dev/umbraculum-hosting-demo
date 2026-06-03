@@ -89,6 +89,8 @@ docker compose -f docker-compose.demo.yml logs -f api web traefik
 
 Traefik obtains the LE certificate once port 80 is reachable for `demo.umbraculum.dev`.
 
+**Traefik + Docker 29:** Compose pins `traefik:v3.6+` (not v3.3). If logs show `client version 1.24 is too old`, run `bin/pull` and `docker compose … up -d --force-recreate traefik`.
+
 ### C6 — Database migrate + seed
 
 When **api** is healthy:

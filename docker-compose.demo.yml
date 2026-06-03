@@ -6,7 +6,9 @@ name: umbraculum-demo
 
 services:
   traefik:
-    image: traefik:v3.3
+    # v3.3 Docker provider speaks API 1.24; Docker CE 29+ (bin/bootstrap) requires >= 1.44.
+    # Use v3.6+ for API negotiation — otherwise no container routes and LE never issues.
+    image: traefik:v3.6
     restart: unless-stopped
     command:
       - --providers.docker=true
