@@ -59,6 +59,7 @@ services:
         apt-get update -qq
         apt-get install -y -qq --no-install-recommends openssl
         rm -rf /var/lib/apt/lists/*
+        npx prisma generate --schema=/repo/services/api/prisma/schema.prisma
         npm run build -w @umbraculum/api
         exec npm run start -w @umbraculum/api
     environment:

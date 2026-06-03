@@ -95,8 +95,10 @@ When **api** is healthy:
 
 ```bash
 cd /opt/umbraculum-hosting-demo
-docker compose -f docker-compose.demo.yml exec api sh -c 'cd /app && npx prisma migrate deploy'
-docker compose -f docker-compose.demo.yml exec api npm run seed:e2e
+docker compose -f docker-compose.demo.yml --env-file .env exec api \
+  sh -c 'npx prisma migrate deploy --schema=/repo/services/api/prisma/schema.prisma'
+docker compose -f docker-compose.demo.yml --env-file .env exec api \
+  npm run seed:e2e -w @umbraculum/api
 ```
 
 ### C7 — Verify (laptop or VPS)
