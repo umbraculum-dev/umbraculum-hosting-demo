@@ -81,7 +81,7 @@ cd /opt/umbraculum-hosting-demo
 docker compose -f docker-compose.demo.yml --env-file .env up -d
 ```
 
-First start runs production **build** for **api** and **web** workspaces (10–30+ minutes). Tail logs:
+First start runs production **build** for **api** and **web** workspaces (10–30+ minutes). The **web** build bakes `NEXT_PUBLIC_WEB_SHELL_NOTICE_ID=demo` (demo credentials + context banner). Tail logs:
 
 ```bash
 docker compose -f docker-compose.demo.yml logs -f api web traefik
@@ -126,6 +126,12 @@ bin/pull
 cd /opt/umbraculum-dev && git pull
 ./scripts/build-packages-in-docker.sh --from-diff HEAD~1 --include-dependents
 docker compose -f docker-compose.demo.yml --env-file .env up -d --build
+```
+
+After pulls that change `WebShellNotice` or `packages/i18n` shell copy, **recreate web** so `next build` re-inlines `NEXT_PUBLIC_*` and messages:
+
+```bash
+docker compose -f docker-compose.demo.yml --env-file .env up -d --force-recreate web
 ```
 
 `bin/harden` / `bin/bootstrap` — see [hosting-common README](https://github.com/umbraculum-dev/umbraculum-hosting-common/blob/main/README.md).

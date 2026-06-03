@@ -110,6 +110,7 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_API_BASE_URL: /api
+      NEXT_PUBLIC_WEB_SHELL_NOTICE_ID: demo
       UMBRACULUM_MODULE_PROFILE: ${UMBRACULUM_MODULE_PROFILE:-reference}
     volumes:
       - ${UMBRACULUM_DEV_ROOT:-/opt/umbraculum-dev}:/repo
