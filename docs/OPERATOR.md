@@ -101,6 +101,10 @@ docker compose -f docker-compose.demo.yml --env-file .env exec api \
   npm run seed:e2e -w @umbraculum/api
 ```
 
+(`seed:e2e` ensures the `custom` beer style on fresh DBs. Optional full catalog: `npm run db:seed -w @umbraculum/api` — needs outbound HTTPS to GitHub for BJCP styles.)
+```
+
+
 ### C7 — Verify (laptop or VPS)
 
 ```bash
