@@ -81,7 +81,7 @@ cd /opt/umbraculum-hosting-demo
 docker compose -f docker-compose.demo.yml --env-file .env up -d
 ```
 
-First start runs production **build** for **api** and **web** workspaces (10–30+ minutes). The **web** build bakes `NEXT_PUBLIC_WEB_SHELL_NOTICE_ID=demo` (demo credentials + context banner). Tail logs:
+First start runs production **build** for **api** and **web** workspaces (10–30+ minutes). The **web** build bakes `NEXT_PUBLIC_WEB_SHARED_LAYOUT_NOTICE_ID=demo` (demo credentials + context banner). Tail logs:
 
 ```bash
 docker compose -f docker-compose.demo.yml logs -f api web traefik
