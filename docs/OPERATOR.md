@@ -120,18 +120,60 @@ Browser: `https://demo.umbraculum.dev/en` — E2E admin per demo-host-runbook.
 
 ## Maintenance
 
+### Redeploy maintenance UX (502/503)
+
+While **api** or **web** restart, nginx (always up) serves a branded **maintenance page** instead of a raw **502 Bad Gateway**:
+
+- Browser routes → `nginx/maintenance/maintenance.html` (HTTP **503**)
+- `/api/*` → JSON `{"ok":false,"maintenance":true,...}` (HTTP **503**)
+
+Config: `nginx/demo.conf` + `nginx/maintenance/` (mounted in compose). Synced mirror: [umbraculum-dev `infra/nginx/demo.conf`](https://github.com/umbraculum-dev/umbraculum-dev/blob/master/infra/nginx/demo.conf).
+
+**Does not cover:** brief gap if **nginx** itself is recreated; **500** from a half-started app (not 502/503).
+
+Deploy maintenance assets after `bin/pull`:
+
+```bash
+cd /opt/umbraculum-hosting-demo
+bin/pull
+docker compose -f docker-compose.demo.yml --env-file .env up -d nginx
+docker compose -f docker-compose.demo.yml --env-file .env exec nginx nginx -t
+```
+
+**Smoke (optional):** stop api/web briefly, curl `https://demo.umbraculum.dev/en/` → 503 HTML maintenance; `curl -s https://demo.umbraculum.dev/api/health` → JSON maintenance; then `docker compose … up -d api web`.
+
+### Planned redeploy (`bin/redeploy`)
+
+Preferred path for routine updates — pulls app repo, recreates **api** + **web**, waits for `https://demo.umbraculum.dev/api/health` → `{"ok":true}`:
+
+```bash
+cd /opt/umbraculum-hosting-demo
+bin/redeploy
+# optional: bin/redeploy --build-packages
+# full stack: bin/redeploy --full-stack
+```
+
+Manual sequence (same as pre-`bin/redeploy`):
+
 ```bash
 cd /opt/umbraculum-hosting-demo
 bin/pull
 cd /opt/umbraculum-dev && git pull
 ./scripts/build-packages-in-docker.sh --from-diff HEAD~1 --include-dependents
-docker compose -f docker-compose.demo.yml --env-file .env up -d --build
+docker compose -f docker-compose.demo.yml --env-file .env up -d --force-recreate api web
 ```
 
 After pulls that change `WebShellNotice` or `packages/i18n` shell copy, **recreate web** so `next build` re-inlines `NEXT_PUBLIC_*` and messages:
 
 ```bash
 docker compose -f docker-compose.demo.yml --env-file .env up -d --force-recreate web
+```
+
+Verify:
+
+```bash
+/opt/umbraculum-dev/scripts/demo-host-verify.sh
+BASE_URL=https://demo.umbraculum.dev /opt/umbraculum-dev/scripts/demo-native-api-smoke.sh
 ```
 
 `bin/harden` / `bin/bootstrap` — see [hosting-common README](https://github.com/umbraculum-dev/umbraculum-hosting-common/blob/main/README.md).

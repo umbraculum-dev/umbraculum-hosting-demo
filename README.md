@@ -27,7 +27,7 @@ Then Phase C in `docs/OPERATOR.md` (clone umbraculum-dev, build packages, `.env`
 |------|------|
 | `common/` | [umbraculum-hosting-common](https://github.com/umbraculum-dev/umbraculum-hosting-common) |
 
-Use **`bin/pull`** on every update.
+Use **`bin/pull`** on every update. Planned app redeploy: **`bin/redeploy`** (see `docs/OPERATOR.md`).
 
 ## Product docs (umbraculum-dev)
 

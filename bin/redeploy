@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Planned demo.umbraculum.dev redeploy — pull app, recreate api/web, wait for health.
+# Unplanned outages during restart show nginx maintenance.html (502/503 → branded page).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+COMPOSE_FILE="$ROOT/docker-compose.demo.yml"
+ENV_FILE="${ENV_FILE:-$ROOT/.env}"
+UMBRACULUM_DEV_ROOT="${UMBRACULUM_DEV_ROOT:-/opt/umbraculum-dev}"
+HEALTH_URL="${HEALTH_URL:-https://demo.umbraculum.dev/api/health}"
+HEALTH_TIMEOUT_SEC="${HEALTH_TIMEOUT_SEC:-900}"
+APP_ONLY=true
+BUILD_PACKAGES=false
+HOSTING_PULL=true
+
+usage() {
+  cat <<'EOF'
+Usage: bin/redeploy [options]
+
+Planned redeploy for demo.umbraculum.dev. While api/web restart, nginx serves
+maintenance.html (502/503) and JSON 503 on /api/*.
+
+Options:
+  --full-stack       Recreate all compose services (default: api + web only)
+  --build-packages   Run build-packages-in-docker.sh after git pull
+  --no-hosting-pull  Skip bin/pull on umbraculum-hosting-demo
+  -h, --help         Show this help
+
+Environment:
+  UMBRACULUM_DEV_ROOT   App clone (default: /opt/umbraculum-dev)
+  HEALTH_URL            Health probe (default: https://demo.umbraculum.dev/api/health)
+  HEALTH_TIMEOUT_SEC    Max wait for {"ok":true} (default: 900)
+  ENV_FILE              Compose env file (default: ./.env)
+EOF
+}
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --full-stack) APP_ONLY=false; shift ;;
+    --build-packages) BUILD_PACKAGES=true; shift ;;
+    --no-hosting-pull) HOSTING_PULL=false; shift ;;
+    -h|--help) usage; exit 0 ;;
+    *)
+      echo "Unknown option: $1" >&2
+      usage >&2
+      exit 1
+      ;;
+  esac
+done
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Missing env file: $ENV_FILE" >&2
+  exit 1
+fi
+
+if [[ "$HOSTING_PULL" == true ]]; then
+  "$ROOT/bin/pull"
+fi
+
+if [[ ! -d "$UMBRACULUM_DEV_ROOT/.git" ]]; then
+  echo "Missing app clone: $UMBRACULUM_DEV_ROOT" >&2
+  exit 1
+fi
+
+echo "==> git pull $UMBRACULUM_DEV_ROOT"
+git -C "$UMBRACULUM_DEV_ROOT" pull --ff-only
+
+if [[ "$BUILD_PACKAGES" == true ]]; then
+  echo "==> build-packages-in-docker.sh"
+  "$UMBRACULUM_DEV_ROOT/scripts/build-packages-in-docker.sh" --from-diff HEAD~1 --include-dependents
+fi
+
+cd "$ROOT"
+echo "==> docker compose up (recreate)"
+if [[ "$APP_ONLY" == true ]]; then
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --force-recreate api web
+else
+  docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d
+fi
+
+echo "==> ensure nginx has maintenance mount + valid config"
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d nginx
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec nginx nginx -t
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" exec nginx nginx -s reload
+
+echo "==> wait for health: $HEALTH_URL (timeout ${HEALTH_TIMEOUT_SEC}s)"
+deadline=$((SECONDS + HEALTH_TIMEOUT_SEC))
+until curl -fsS "$HEALTH_URL" | grep -q '"ok":true'; do
+  if (( SECONDS >= deadline )); then
+    echo "Health check timed out after ${HEALTH_TIMEOUT_SEC}s" >&2
+    exit 1
+  fi
+  sleep 10
+done
+
+echo "OK — demo health green"
